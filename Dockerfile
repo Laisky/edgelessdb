@@ -1,3 +1,6 @@
+# openssl genrsa -out private.pem -3 3072
+# docker build . -t ppcelery/edgelessdb:8G
+
 FROM ubuntu:focal-20220531 AS build
 
 RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
@@ -31,12 +34,23 @@ RUN cd edgelessdb && export SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct) && cd /
   && make -j`nproc` edb-enclave
 
 # sign edb
-ARG heapsize=1024 production=OFF
-RUN --mount=type=secret,id=signingkey,dst=/edbbuild/private.pem,required=true \
-  cd edbbuild \
+# ARG heapsize=1024 production=OFF
+# RUN --mount=type=secret,id=signingkey,dst=/edbbuild/private.pem,required=true \
+
+# Changes by Laisky:
+#   1. bigger HEAPSIZE
+#   2. private key at `./private.pem`
+#   3. production ON
+#   4. maxium NumTCS (1024)
+ARG heapsize=8096 production=ON
+ADD private.pem /edbbuild/private.pem
+RUN sed -i "s/NumTCS=64/NumTCS=1024/" edgelessdb/src/enclave.conf
+
+RUN  cd edbbuild \
   && . /opt/edgelessrt/share/openenclave/openenclaverc \
   && cmake -DHEAPSIZE=$heapsize -DPRODUCTION=$production /edgelessdb \
-  && make sign-edb
+  && make sign-edb \
+  && cat edgelessdb-sgx.json
 
 # deploy
 FROM ubuntu:focal-20220531
