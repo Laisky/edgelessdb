@@ -33,7 +33,8 @@ jobs:
         working-directory: build
 
       - name: Deploy nightly
-        if: github.ref == 'refs/heads/main' &&
+        if: github.repository == 'edgelesssys/edgelessdb' &&
+          github.ref == 'refs/heads/main' &&
           github.event_name == 'push'
         run: |
           curl -X POST -H "Accept: application/vnd.github.v3+json" \
